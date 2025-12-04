@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              BigInt            @id @default(autoincrement())
+  name            String            @db.VarChar(40)
+  nickname        String?           @db.VarChar(60)
+  gender          Gender?
+  birth           DateTime?         @db.Date
+  address         String?           @db.VarChar(100)
+  detailAddress   String?           @map("detail_address") @db.VarChar(255)
+  phoneNumber     String?           @map("phone_num") @db.VarChar(60)
+  email           String            @unique @db.VarChar(60)
+  password        String            @db.VarChar(200)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.DateTime(6)
+  updatedAt       DateTime          @default(now()) @map("updated_at") @db.DateTime(6)
+  status          UserStatus
+  phoneVerified   Boolean?          @default(false) @map("phone_verified")
+  currentPoint    Int?              @default(0) @map("current_point")
+  
+  userFoodPreferences user_preference[] @relation("UserFoodPreference")
+  userPoints      UserPoint[]
+  user_mission    user_mission[]
+
+  @@map("user")
+}
+
+model Food {
+  id   BigInt  @id @default(autoincrement())
+  name String  @db.VarChar(50)
+
+  userFoodPreferences user_preference[]
+  @@map("food")
+}
+
+model UserPoint {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  amount    Int
+  reason    String?   @db.VarChar(100)
+  createdAt DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  user      User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_point_ibfk_1")
+
+  @@index([userId], map: "user_id")
+  @@map("user_point")
+}
+
+model mission {
+  id          BigInt         @id @default(autoincrement())
+  title       String         @db.VarChar(30)
+  description String         @db.Text
+  store_id    BigInt
+  status      mission_status
+  point       BigInt
+  created_at  DateTime       @default(now()) @db.DateTime(0)
+  updated_at  DateTime       @default(now()) @db.DateTime(0)
+
+  store       store          @relation(fields: [store_id], references: [id])
+
+  user_mission user_mission[]
+}
+
+model preference_option {
+  id              BigInt                        @id
+  question        String                        @db.Text
+  option          String                        @db.VarChar(50)
+  option_type     preference_option_option_type
+  is_active       Boolean
+  created_at      DateTime                      @db.DateTime(6)
+  updated_at      DateTime                      @db.DateTime(6)
+
+  @@map("preference-option")
+}
+
+model region {
+  id     BigInt        @id
+  region String        @db.VarChar(50)
+  status region_status
+}
+
+model review {
+  id              BigInt        @id @default(autoincrement())
+  store_id        BigInt?
+  title           String?       @db.VarChar(70)
+  detail          String?       @db.Text
+  rating          Float?        @db.Float
+  status          review_status
+  user_mission_id BigInt?
+  user_id         BigInt
+  mission_id      BigInt?
+  created_at      DateTime?     @default(now()) @db.DateTime(0)
+  store           store?        @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_review_store")
+
+  @@index([store_id], map: "fk_review_store")
+}
+
+model store {
+  id          BigInt   @id @default(autoincrement())
+  store       String   @db.VarChar(50)
+  address     String   @db.VarChar(200)
+  description String?  @db.Text
+  region_id   BigInt
+  status      String   @db.VarChar(255)
+
+  review      review[]
+  missions    mission[]
+}
+
+model user_mission {
+  id           Int                  @id @default(autoincrement())
+  user_id      BigInt
+  mission_id   BigInt
+  status       user_mission_status? @default(IN_PROGRESS)
+  started_at   DateTime?            @db.DateTime(6)
+  completed_at DateTime?            @db.DateTime(6)
+
+  mission      mission              @relation(fields: [mission_id], references: [id])
+  user         User                 @relation(fields: [user_id], references: [id])
+
+  @@index([mission_id], map: "FK_mission_TO_user-mission_1")
+  @@index([user_id], map: "FK_user_TO_user-mission_1")
+  @@map("user-mission")
+}
+
+model user_preference {
+  id          BigInt @id @default(autoincrement())
+  user_id     BigInt
+  food_id     BigInt
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  status      user_preference_status @default(active)
+
+  user User @relation("UserFoodPreference", fields: [user_id], references: [id])
+  food Food @relation(fields: [food_id], references: [id])
+
+  @@index([user_id])
+  @@index([food_id])
+  @@map("user_preference")
+}
+
+enum Gender {
+  man
+  woman
+}
+
+enum UserStatus {
+  active
+  withdraw
+}
+
+enum region_status {
+  active
+  withdraw
+}
+
+enum preference_option_option_type {
+  single
+  multiple
+
+  @@map("preference-option_option_type")
+}
+
+enum user_mission_status {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+
+  @@map("user-mission_status")
+}
+
+enum mission_status {
+  active
+  withdraw
+}
+
+enum user_preference_status {
+  active
+  withdraw
+
+  @@map("user-preference_status")
+}
+
+enum review_status {
+  active
+  withdraw
+}

@@ -5,3 +5,4 @@ node_modules/
 .env
 .env.*
 jsconfig.json
+/src/generated/prisma
